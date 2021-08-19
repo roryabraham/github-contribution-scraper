@@ -108,13 +108,10 @@ function getGitHubData() {
             .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
             .then(reviews => {
                 return _.map(reviews, review => {
-                    let url = review.html_url.replace(/#.*$/,'');
+                    let url = review.html_url.replace(/#.*$/, '');
                     let pr = _.find(reviewedPRs, reviewedPR => {
                         return reviewedPR.html_url === url;
                     });
-                    console.log(url);
-                    console.log(pr);
-                    console.log("-------------");
                     review.prTitle = pr.title;
                     return review;
                 });
