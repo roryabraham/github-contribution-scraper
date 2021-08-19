@@ -242,7 +242,9 @@ getGitHubData()
 
                 if (!_.isEmpty(updatedPRsWithCommits)) {
                     _.each(updatedPRsWithCommits, (prWithCommits, prNumber) => {
-                        output += `<li><span style='background-color: #6e549480;'>GH:</span> Updated PR #${prNumber} with the following commits:<ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
+                        output += `<li><span style='background-color: #6e549480;'>GH:</span> Updated <a href='${prWithCommits.url}'>PR #${prNumber}</a> &mdash;
+                            ${prWithCommits.commits[0].associatedPullRequests[0].title} &mdash;with the following ${prWithCommits.commits.length} commit(s):
+                            <ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
                     });
                 }
 
