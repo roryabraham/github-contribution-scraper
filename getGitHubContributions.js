@@ -2,7 +2,7 @@
 
 const _ = require('underscore');
 const {exit} = require('process');
-const {writeFileSync} = require('fs')
+const {writeFileSync} = require('fs');
 const moment = require('moment-timezone');
 const {Octokit} = require('@octokit/rest');
 const {throttling} = require('@octokit/plugin-throttling');
@@ -22,7 +22,7 @@ const argv = yargs
             if (!moment(date).isValid()) {
                 throw new Error(`Error: ${option} ${date} is not a valid date`);
             }
-        })
+        });
 
         if (!_.isEmpty(argv.startDate) && !_.isEmpty(argv.endDate) && moment(argv.startDate).isAfter(argv.endDate)) {
             throw new Error(`Error: startDate ${argv.startDate} is after endDate ${argv.endDate}`);
@@ -54,7 +54,7 @@ const octokit = new OctokitThrottled({
         },
         onAbuseLimit: (retryAfter, options) => {
             // does not retry, only logs a warning
-            console.error(`Abuse detected for request ${options.method} ${options.url}`,);
+            console.error(`Abuse detected for request ${options.method} ${options.url}`);
         },
     },
 });
@@ -79,11 +79,11 @@ function getGitHubData() {
             }),
         ]))
         .then(([
-                   issuesAndPullRequestsCreated,
-                   reviewedPRs,
-                   issuesAndPullRequestsCommented,
-                   commits,
-               ]) => {
+            issuesAndPullRequestsCreated,
+            reviewedPRs,
+            issuesAndPullRequestsCommented,
+            commits,
+        ]) => {
             return Promise.all(_.map(
                 issuesAndPullRequestsCommented,
                 issue => octokit.paginate(`GET ${issue.comments_url.slice('https://api.github.com'.length)}`))
@@ -97,55 +97,55 @@ function getGitHubData() {
                 }));
         })
         .then(({
-                   issues,
-                   reviewedPRs,
-                   comments,
-                   commits,
-               }) => Promise.all(_.map(
-                reviewedPRs,
-                reviewedPR => octokit.paginate(
-                    `GET ${reviewedPR.url.slice('https://api.github.com'.length)}/timeline`,
-                    {headers: {Accept: 'application/vnd.github.mockingbird-preview'}}
-                )
-            ))
-                .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
-                .then(reviews => ({
-                    issues,
-                    reviews,
-                    comments,
-                    commits,
-                }))
-        )
-        .then(({
-                   issues,
-                   reviews,
-                   comments,
-                   commits,
-               }) => Promise.all(_.map(
+            issues,
+            reviewedPRs,
+            comments,
+            commits,
+        }) => Promise.all(_.map(
+            reviewedPRs,
+            reviewedPR => octokit.paginate(
+                `GET ${reviewedPR.url.slice('https://api.github.com'.length)}/timeline`,
+                {headers: {Accept: 'application/vnd.github.mockingbird-preview'}}
+            )
+        ))
+            .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
+            .then(reviews => ({
+                issues,
+                reviews,
+                comments,
                 commits,
-                commit => octokit.repos.listPullRequestsAssociatedWithCommit({
-                    owner: 'Expensify',
-                    repo: commit.repository.name,
-                    commit_sha: commit.sha,
-                })
-                    .then(({data}) => ({
-                        ...commit,
-                        associatedPullRequests: _.filter(data, pr => pr.user.login === username),
-                    }))
-            ))
-                .then(commitsWithAssociatedPullRequests => ({
-                    issues,
-                    reviews,
-                    comments,
-                    commits: _.filter(commitsWithAssociatedPullRequests, commit => !_.isEmpty(commit.associatedPullRequests)),
-                }))
+            }))
         )
         .then(({
-                   issues,
-                   reviews,
-                   comments,
-                   commits,
-               }) => {
+            issues,
+            reviews,
+            comments,
+            commits,
+        }) => Promise.all(_.map(
+            commits,
+            commit => octokit.repos.listPullRequestsAssociatedWithCommit({
+                owner: 'Expensify',
+                repo: commit.repository.name,
+                commit_sha: commit.sha,
+            })
+                .then(({data}) => ({
+                    ...commit,
+                    associatedPullRequests: _.filter(data, pr => pr.user.login === username),
+                }))
+        ))
+            .then(commitsWithAssociatedPullRequests => ({
+                issues,
+                reviews,
+                comments,
+                commits: _.filter(commitsWithAssociatedPullRequests, commit => !_.isEmpty(commit.associatedPullRequests)),
+            }))
+        )
+        .then(({
+            issues,
+            reviews,
+            comments,
+            commits,
+        }) => {
             const fullDataSet = _.chain([
                 startDate,
                 ...DateUtils.enumerateDaysBetweenDates(startDate, endDate),
@@ -159,7 +159,7 @@ function getGitHubData() {
                         reviews: [],
                         comments: [],
                         commits: [],
-                    }
+                    };
                     return memo;
                 }, {})
                 .value();
@@ -169,32 +169,32 @@ function getGitHubData() {
                     if (moment(issue.created_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
                         dataForDate.issues.push(issue);
                     }
-                })
-            })
+                });
+            });
 
             _.each(reviews, (review) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
                     if (moment(review.submitted_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
                         dataForDate.reviews.push(review);
                     }
-                })
-            })
+                });
+            });
 
             _.each(comments, (comment) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
                     if (moment(comment.created_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
                         dataForDate.comments.push(comment);
                     }
-                })
-            })
+                });
+            });
 
             _.each(commits, (commit) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
                     if (moment(commit.commit.author.date).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
                         dataForDate.commits.push(commit);
                     }
-                })
-            })
+                });
+            });
 
             return fullDataSet;
         })
@@ -225,11 +225,11 @@ getGitHubData()
                                     memo[pr.number] = {
                                         url: pr.html_url,
                                         commits: [commit],
-                                    }
+                                    };
                                 } else {
                                     memo[pr.number].commits.push(commit);
                                 }
-                            })
+                            });
                             return memo;
                         },
                         {},
