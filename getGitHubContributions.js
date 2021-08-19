@@ -37,9 +37,6 @@ const startDate = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, 'America/
     .format(GITHUB_TIMEZONE_FORMAT);
 const endDate = moment.tz(`${argv.endDate ?? argv.date} 23:59:59`, 'America/Los_Angeles')
     .format(GITHUB_TIMEZONE_FORMAT);
-const twoWeeksBefore = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, 'America/Los_Angeles')
-    .subtract(14, 'days')
-    .format(GITHUB_TIMEZONE_FORMAT);
 
 // Setup Octokit
 const OctokitThrottled = Octokit.plugin(throttling);
@@ -68,7 +65,7 @@ function getGitHubData() {
                 q: `org:Expensify author:${username} created:${startDate}..${endDate}`,
             }),
             octokit.paginate(octokit.search.issuesAndPullRequests, {
-                q: `org:Expensify is:pr reviewed-by:${username} created:${twoWeeksBefore}..${endDate}`,
+                q: `org:Expensify is:pr reviewed-by:${username} created:${startDate}..${endDate}`,
                 per_page: 100,
             }),
             octokit.paginate(octokit.search.issuesAndPullRequests, {
@@ -106,8 +103,20 @@ function getGitHubData() {
             reviewedPR => octokit.paginate(
                 `GET ${reviewedPR.url.slice('https://api.github.com'.length)}/timeline`,
                 {headers: {Accept: 'application/vnd.github.mockingbird-preview'}}
-            )
-        ))
+            )))
+            .then(events => {
+                // So GH seems to return an array of arrays, with each subarray being a list of actual events.
+                if (_.isArray(events) && events.length && _.isArray(events[0])) {
+                    var coalesced = _.reduce(events, (l, sublist) => {
+                        return l.concat(sublist);
+                    }, []);
+                    return coalesced;
+                }
+
+                // I'm not sure if this is ever actually the case, but think it might be for less than "one page"
+                // worth of results (i.e., if "events" is too short to split into sublists)?
+                return events;
+            })
             .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
             .then(reviews => ({
                 issues,
