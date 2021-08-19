@@ -12,10 +12,12 @@ const DateUtils = require('./dateUtils');
 const argv = yargs
     .options({
         'token': {type: 'string', alias: 't', demandOption: true, describe: 'GitHub Personal Access Token (PAT)'},
-        'date': {type: 'string', alias: 'd', describe: 'Specific date to find data for', conflicts: ['startDate', 'endDate']},
-        'startDate': {type: 'string', describe: 'Beginning of date range to find data for', implies: 'endDate', conflicts: 'date'},
-        'endDate': {type: 'string', describe: 'End of date range to find data for', implies: 'startDate', conflicts: 'date'},
+        'date': {type: 'string', alias: 'd', describe: 'Specific date to find data for', conflicts: ['startDate', 'endDate', '10am']},
+        'startDate': {type: 'string', describe: 'Beginning of date range to find data for', implies: 'endDate', conflicts: ['date', '10am']},
+        'endDate': {type: 'string', describe: 'End of date range to find data for', implies: 'startDate', conflicts: ['date', '10am']},
         'outputFile': {type: 'string', alias: 'o', describe: 'Filepath for output file', default: 'output.html'},
+        '10am': {type: 'string', describe: 'The location of a 10am dump file read', conflicts: ['date', 'startDate', 'endDate']},
+        'timezone': {type: 'string', describe: 'The timezone you worked from on the provided dates.', default: 'America/Los_Angeles'},
     })
     .check((argv) => {
         _.each(_.pick(argv, ['date', 'startDate', 'endDate']), (date, option) => {
@@ -28,16 +30,20 @@ const argv = yargs
             throw new Error(`Error: startDate ${argv.startDate} is after endDate ${argv.endDate}`);
         }
 
+        if (!DateUtils.isValidTimeZone(argv.timezone)) {
+            throw new Error(`Error: Timezone ${argv.timezone} is not valid`);
+        }
+
         return true;
     }).argv;
 
 // Adjust date for timezone for GitHub
 const GITHUB_TIMEZONE_FORMAT = 'YYYY-MM-DDTHH:mm:ssZ';
-const startDate = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, 'America/Los_Angeles')
+const startDate = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, argv.timezone)
     .format(GITHUB_TIMEZONE_FORMAT);
-const endDate = moment.tz(`${argv.endDate ?? argv.date} 23:59:59`, 'America/Los_Angeles')
+const endDate = moment.tz(`${argv.endDate ?? argv.date} 23:59:59`, argv.timezone)
     .format(GITHUB_TIMEZONE_FORMAT);
-const twoWeeksBefore = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, 'America/Los_Angeles')
+const twoWeeksBefore = moment.tz(`${argv.startDate ?? argv.date} 00:00:00`, argv.timezone)
     .subtract(14, 'days')
     .format(GITHUB_TIMEZONE_FORMAT);
 
@@ -166,7 +172,7 @@ function getGitHubData() {
 
             _.each(issues, (issue) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
-                    if (moment(issue.created_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
+                    if (moment(issue.created_at).tz(argv.timezone).isSame(distinctDate, 'day')) {
                         dataForDate.issues.push(issue);
                     }
                 });
@@ -174,7 +180,7 @@ function getGitHubData() {
 
             _.each(reviews, (review) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
-                    if (moment(review.submitted_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
+                    if (moment(review.submitted_at).tz(argv.timezone).isSame(distinctDate, 'day')) {
                         dataForDate.reviews.push(review);
                     }
                 });
@@ -182,7 +188,7 @@ function getGitHubData() {
 
             _.each(comments, (comment) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
-                    if (moment(comment.created_at).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
+                    if (moment(comment.created_at).tz(argv.timezone).isSame(distinctDate, 'day')) {
                         dataForDate.comments.push(comment);
                     }
                 });
@@ -190,7 +196,7 @@ function getGitHubData() {
 
             _.each(commits, (commit) => {
                 _.each(fullDataSet, (dataForDate, distinctDate) => {
-                    if (moment(commit.commit.author.date).tz('America/Los_Angeles').isSame(distinctDate, 'day')) {
+                    if (moment(commit.commit.author.date).tz(argv.timezone).isSame(distinctDate, 'day')) {
                         dataForDate.commits.push(commit);
                     }
                 });
