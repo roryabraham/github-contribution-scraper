@@ -1,0 +1,31 @@
+{
+  "name": "github-contribution-scraper",
+  "version": "1.0.0",
+  "description": "A command-line tool that uses the GitHub API to collect contribution data.",
+  "main": "getGitHubContributions.js",
+  "scripts": {
+    "lint": "eslint . --max-warnings=0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roryabraham/github-contribution-scraper.git"
+  },
+  "author": "roryabraham",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/roryabraham/github-contribution-scraper/issues"
+  },
+  "homepage": "https://github.com/roryabraham/github-contribution-scraper#readme",
+  "dependencies": {
+    "@octokit/plugin-throttling": "^3.5.1",
+    "@octokit/rest": "^18.9.1",
+    "moment": "^2.29.1",
+    "moment-timezone": "^0.5.33",
+    "process": "^0.11.10",
+    "underscore": "^1.13.1",
+    "yargs": "^17.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0"
+  }
+}
