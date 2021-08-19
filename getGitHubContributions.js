@@ -104,19 +104,7 @@ function getGitHubData() {
                 `GET ${reviewedPR.url.slice('https://api.github.com'.length)}/timeline`,
                 {headers: {Accept: 'application/vnd.github.mockingbird-preview'}}
             )))
-            .then(events => {
-                // So GH seems to return an array of arrays, with each subarray being a list of actual events.
-                if (_.isArray(events) && events.length && _.isArray(events[0])) {
-                    var coalesced = _.reduce(events, (l, sublist) => {
-                        return l.concat(sublist);
-                    }, []);
-                    return coalesced;
-                }
-
-                // I'm not sure if this is ever actually the case, but think it might be for less than "one page"
-                // worth of results (i.e., if "events" is too short to split into sublists)?
-                return events;
-            })
+            .then(events => _.flatten(events, 1))
             .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
             .then(reviews => ({
                 issues,
