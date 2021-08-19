@@ -106,6 +106,12 @@ function getGitHubData() {
             )))
             .then(events => _.flatten(events, 1))
             .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
+            .then(reviews => _.map(reviews, review => {
+                    let url = review.html_url.replace(/#.*$/, '');
+                    let pr = _.find(reviewedPRs, reviewedPR => reviewedPR.html_url === url);
+                    review.prTitle = pr.title;
+                    return review;
+                }))
             .then(reviews => ({
                 issues,
                 reviews,
@@ -241,7 +247,7 @@ getGitHubData()
                 }
 
                 if (!_.isEmpty(reviews)) {
-                    _.each(reviews, review => output += `<li><span style='background-color: #6e549480;'>GH:</span> <a href='${review.html_url}'>Reviewed PR #${review.pull_request_url.split('/').pop()}</a></li>`);
+                    _.each(reviews, review => output += `<li><span style='background-color: #6e549480;'>GH:</span> Reviewed <a href='${review.html_url}'>PR #${review.pull_request_url.split('/').pop()}</a> &mdash; ${review.prTitle}</li>`);
                 }
 
                 if (!_.isEmpty(comments)) {
