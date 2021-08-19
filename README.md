@@ -1,5 +1,11 @@
 # github-contribution-scraper
-This is a command-line tool to gather GitHub contributions for a given date or date range. To use it:
+This is a command-line tool to gather GitHub contributions for a given date or date range. It gathers the following data:
+
+- PRs and issues you created
+- Commits that you created, and their related PRs
+- Comments that you left on issues and pull requests
+
+To use it:
 
 1. First, get a [GitHub Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 2. Next, clone this repo and run `npm i`
