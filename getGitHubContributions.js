@@ -512,7 +512,7 @@ async function run() {
             argv.startDate ?? argv.date,
             argv.endDate ?? argv.date,
         );
-        getGitHubData(username, startDate, endDate, twoWeeksBefore)
+        await getGitHubData(username, startDate, endDate, twoWeeksBefore)
             .then(dataset => {
                 _.each(dataset, ({issues, reviews, comments, commits}, date) => {
                     if (!_.every([issues, reviews, comments, commits], item => _.isEmpty(item))) {
