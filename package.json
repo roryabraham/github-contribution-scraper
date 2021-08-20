@@ -19,6 +19,7 @@
   "dependencies": {
     "@octokit/plugin-throttling": "^3.5.1",
     "@octokit/rest": "^18.9.1",
+    "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
     "process": "^0.11.10",
