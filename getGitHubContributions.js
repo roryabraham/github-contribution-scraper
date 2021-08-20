@@ -99,7 +99,7 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
             q: `org:Expensify author:${username} created:${startDate}..${endDate}`,
         }),
         octokit.paginate(octokit.search.issuesAndPullRequests, {
-            q: `org:Expensify is:pr reviewed-by:${username} created:${twoWeeksBefore}..${endDate}`,
+            q: `org:Expensify is:pr reviewed-by:${username} created:${startDate}..${endDate}`,
             per_page: 100,
         }),
         octokit.paginate(octokit.search.issuesAndPullRequests, {
@@ -141,9 +141,15 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
             reviewedPR => octokit.paginate(
                 `GET ${reviewedPR.url.slice('https://api.github.com'.length)}/timeline`,
                 {headers: {Accept: 'application/vnd.github.mockingbird-preview'}}
-            )
-        ))
+            )))
+            .then(events => _.flatten(events, 1))
             .then(events => _.filter(events, event => event.event === 'reviewed' && event.user.login === username))
+            .then(reviews => _.map(reviews, review => {
+                let url = review.html_url.replace(/#.*$/, '');
+                let pr = _.find(reviewedPRs, reviewedPR => reviewedPR.html_url === url);
+                review.prTitle = pr.title;
+                return review;
+            }))
             .then(reviews => ({
                 issues,
                 reviews,
@@ -397,15 +403,17 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
             .omit(_.pluck(issues, 'number'))
             .value();
 
-        if (!_.isEmpty(updatedPRsWithCommits)) {
-            _.each(updatedPRsWithCommits, (prWithCommits, prNumber) => {
-                formatted += `<li><span style='background-color: cyan;'>GH:</span> Updated PR #${prNumber} with the following commits:<ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
-            });
-        }
+                if (!_.isEmpty(updatedPRsWithCommits)) {
+                    _.each(updatedPRsWithCommits, (prWithCommits, prNumber) => {
+                        formatted += `<li><span style='background-color: cyan;'>GH:</span> Updated <a href='${prWithCommits.url}'>PR #${prNumber}</a> &mdash;
+                            ${prWithCommits.commits[0].associatedPullRequests[0].title} &mdash;with the following ${prWithCommits.commits.length} commit(s):
+                            <ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
+                    });
+                }
 
-        if (!_.isEmpty(reviews)) {
-            _.each(reviews, review => formatted += `<li><span style='background-color: cyan;'>GH:</span> <a href='${review.html_url}'>Reviewed PR #${review.pull_request_url.split('/').pop()}</a></li>`);
-        }
+                if (!_.isEmpty(reviews)) {
+                    _.each(reviews, review => formatted += `<li><span style='background-color: cyan;'>GH:</span> Reviewed <a href='${review.html_url}'>PR #${review.pull_request_url.split('/').pop()}</a> &mdash; ${review.prTitle}</li>`);
+                }
 
         if (!_.isEmpty(comments)) {
             formatted += `<li><span style='background-color: cyan;'>GH:</span> Comments:<ul>${_.map(_.pluck(comments, 'html_url'), url => `<li><a href='${url}'>${url.slice('https://github.com/Expensify/'.length)}</a></li>`).join('')}</ul></li>`;
