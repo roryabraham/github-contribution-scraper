@@ -18,7 +18,7 @@ const argv = yargs
         'date': {type: 'string', alias: 'd', describe: 'Specific date to find data for', conflicts: ['startDate', 'endDate', 'tenAM']},
         'startDate': {type: 'string', describe: 'Beginning of date range to find data for', implies: 'endDate', conflicts: ['date', 'tenAM']},
         'endDate': {type: 'string', describe: 'End of date range to find data for', implies: 'startDate', conflicts: ['date', 'tenAM']},
-        'outputFile': {type: 'string', alias: 'o', describe: 'Filepath for output file', default: 'output.html'},
+        'output': {type: 'string', alias: 'o', describe: 'Filepath for output file', default: 'output.html'},
         'tenAM': {type: 'string', describe: 'The location of a 10am dump file read', conflicts: ['date', 'startDate', 'endDate']},
         'timezone': {type: 'string', describe: 'The timezone you worked from on the provided dates.', default: CONST.DEFAULT_TIMEZONE},
     })
@@ -53,7 +53,7 @@ const octokit = new OctokitThrottled({
         onRateLimit: (retryAfter, options) => {
             // Retry once after hitting a rate limit error, then give up
             if (options.request.retryCount <= 5) {
-                console.warn(`Warning: Got rate-limited by the GH API for the ${options.request.retryCount} time.`);
+                console.warn(`⚠️ WARNING: Got rate-limited by the GH API for the ${options.request.retryCount} time.`);
                 searchThrottle = 500 + (options.request.retryCount * 1000);
                 return true;
             }
@@ -61,11 +61,11 @@ const octokit = new OctokitThrottled({
         onAbuseLimit: (retryAfter, options) => {
             // does not retry, only logs a warning
             if (options.request.retryCount < 1) {
-                console.warn('WARNING: Hit the abuse limit for the GH API, retrying once');
+                console.warn('⚠️ WARNING: Hit the abuse limit for the GH API, retrying once');
                 searchThrottle *= 2;
                 return true;
             }
-            console.error(`Abuse detected for request ${options.method} ${options.url}`);
+            console.error(`💥 Abuse detected for request ${options.method} ${options.url}`);
         },
     },
 });
@@ -90,7 +90,7 @@ async function getGitHubUsername() {
  */
 function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
     const dateRangePrintable = `${moment(startDate).format(CONST.DATE_FORMAT_STANDARD)}${moment(startDate).isSame(endDate, 'day') ? '' : ` to ${moment(endDate).format(CONST.DATE_FORMAT_STANDARD)}`}`;
-    console.log(`Collecting GitHub data from ${dateRangePrintable}`);
+    console.log(`Collecting GitHub data from ${dateRangePrintable}...`);
 
     // Search for issues, pull requests, and commits
     // Do these one-after-another to alleviate rate-limiting issues
@@ -246,7 +246,7 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
                 });
             });
 
-            console.log(`Finished collecting GitHub data from ${dateRangePrintable}`);
+            console.log(`Finished collecting GitHub data from ${dateRangePrintable}\n`);
             return fullDataSet;
         })
         .catch((e) => {
@@ -262,7 +262,7 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
  * @returns {Object}
  */
 function parseTenAMData(filepath) {
-    console.log(`Reading data from 10am dump file: ${filepath}`);
+    console.log(`Reading data from 10am dump file: ${filepath}...`);
     const rawTenAMData = readFileSync(filepath).toString();
 
     // Split data by year
@@ -429,16 +429,18 @@ async function run() {
     const username = await getGitHubUsername();
     if (argv.tenAM) {
         const tenAMData = parseTenAMData(argv.tenAM);
-        console.log(`Finished parsing 10am data from ${argv.tenAM}`);
+        console.log(`Finished parsing 10am data from ${argv.tenAM}\n`);
 
         let mergedData = tenAMData;
         const earliestYear = Number(_.first(_.keys(tenAMData).sort()));
         const latestYear = Number(_.last(_.keys(tenAMData).sort()));
         for (let currentYear = latestYear; currentYear >= earliestYear; currentYear--) {
+            console.log(`Collecting data for ${currentYear}...\n`);
             const monthsSorted = _.sortBy(_.keys(tenAMData[currentYear]), month => _.indexOf(CONST.MONTHS, month));
             const earliestMonth = _.first(monthsSorted);
             const latestMonth = _.last(monthsSorted);
             for (let currentMonth of CONST.MONTHS.slice(_.indexOf(CONST.MONTHS, earliestMonth), _.indexOf(CONST.MONTHS, latestMonth) + 1).reverse()) {
+                console.log(`Collecting data for ${currentMonth}, ${currentYear}...\n`);
                 // Given the current month's 10ams, determine the date ranges we need to fetch GH data for
                 const monthTenAMs = tenAMData[currentYear][currentMonth];
                 const dateRanges = _.chain(Array.from(
@@ -468,31 +470,42 @@ async function run() {
                     lodashMerge(mergedData[currentYear][currentMonth], gitHubDataForRange);
                 }
 
-                console.log(`Finished gathering all data for ${currentMonth}, ${currentYear}`);
+                console.log(`🎉 Finished gathering all data for ${currentMonth}, ${currentYear} 🎉\n`);
             }
+            console.log(`🎉 Finished gathering all data for ${currentYear} 🎉\n`);
         }
 
-        _.each(mergedData, (monthData, year) => {
-            _.each(monthData, (dailyData, month) => {
-                const sortedDailyData = _.reduce(
-                    _.keys(mergedData[year][month]).sort(),
-                    (sorted, date) => ({
-                        ...sorted,
-                        [date]: mergedData[year][month][date],
-                    }),
-                    {},
-                );
-                _.each(sortedDailyData, (value, date) => {
-                    if (_.isString(value)) {
-                        // This is raw 10am data
-                        output += formatTenAMDataForOutput(date, value);
-                    } else {
-                        // This is GH data
-                        output += formatGHDataForOutput(username, date, value.issues, value.reviews, value.comments, value.commits);
-                    }
+        _.each(
+            // Sort years alphanumerically from high to low
+            _.chain(mergedData)
+                .keys()
+                .map(key => Number(key))
+                .sort((x, y) => y - x)
+                .value(),
+            (year) => {
+                // Months are already sorted
+                _.each(mergedData[year], (dailyData, month) => {
+                    // Sort dates within the month from the 1st to the 31st
+                    const sortedDailyData = _.reduce(
+                        _.keys(mergedData[year][month]).sort(),
+                        (sorted, date) => ({
+                            ...sorted,
+                            [date]: mergedData[year][month][date],
+                        }),
+                        {},
+                    );
+                    _.each(sortedDailyData, (value, date) => {
+                        if (_.isString(value)) {
+                            // This is raw 10am data
+                            output += formatTenAMDataForOutput(date, value);
+                        } else {
+                            // This is GH data
+                            output += formatGHDataForOutput(username, date, value.issues, value.reviews, value.comments, value.commits);
+                        }
+                    });
                 });
-            });
-        });
+            }
+        );
     } else {
         const {startDate, endDate, twoWeeksBefore} = DateUtils.adjustDateAndTimezoneForGitHub(
             argv.timezone,
@@ -509,7 +522,7 @@ async function run() {
             });
     }
 
-    writeFileSync(argv.outputFile, output);
+    writeFileSync(argv.output, output);
 }
 
 if (require.main === module) {
