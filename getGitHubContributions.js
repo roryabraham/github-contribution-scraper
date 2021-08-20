@@ -375,7 +375,7 @@ function formatTenAMDataForOutput(date, rawData) {
 function formatGHDataForOutput(username, date, issues, reviews, comments, commits) {
     let formatted = '';
     if (!_.every([issues, reviews, comments, commits], item => _.isEmpty(item))) {
-        const outputDate = moment(date).format('MMM Do YYYY dddd').toUpperCase();
+        const outputDate = DateUtils.formatDateForOutput(date);
         formatted += `<h3>${outputDate} <a href='https://github.com/${username}?tab=overview&from=${date}&to=${date}'><span style='background-color: cyan;'>[Note: GH Activity]</span></a></h3>`;
         formatted += '<ul>';
 
