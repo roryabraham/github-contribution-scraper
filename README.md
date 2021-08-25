@@ -20,5 +20,5 @@ Options:
 -d, --date        Specific date to find data for                      [string]
 --startDate   Beginning of date range to find data for            [string]
 --endDate     End of date range to find data for                  [string]
--o, --outputFile  Filepath for output file   [string] [default: "output.html"]
+-o, --output  Filepath for output file   [string] [default: "output.html"]
 ```
