@@ -147,7 +147,7 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
             .then(reviews => _.map(reviews, review => {
                 let url = review.html_url.replace(/#.*$/, '');
                 let pr = _.find(reviewedPRs, reviewedPR => reviewedPR.html_url === url);
-                review.prTitle = pr.title.replace(/\[/g, "{").replace(/\]/g, "}");
+                review.prTitle = pr.title;
                 return review;
             }))
             .then(reviews => ({
@@ -380,7 +380,7 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
         formatted += '<ul>';
 
         if (!_.isEmpty(issues)) {
-            _.each(issues, issue => formatted += `<li><span style='background-color: cyan;'>GH:</span> Created <a href='${issue.html_url}'>${issue.pull_request ? 'PR' : 'Issue'} #${issue.number}</a> &mdash; ${issue.title}</li>`);
+            _.each(issues, issue => formatted += `<li><span style='background-color: cyan;'>GH:</span> Created <a href='${issue.html_url}'>${issue.pull_request ? 'PR' : 'Issue'} #${issue.number}</a> &mdash; ${issue.title.replace(/\[/g, "{").replace(/\]/g, "}")}</li>`);
         }
 
         const updatedPRsWithCommits = _.chain(commits)
@@ -413,7 +413,7 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
         }
 
         if (!_.isEmpty(reviews)) {
-            _.each(reviews, review => formatted += `<li><span style='background-color: cyan;'>GH:</span> Reviewed <a href='${review.html_url}'>PR #${review.pull_request_url.split('/').pop()}</a> &mdash; ${review.prTitle}</li>`);
+            _.each(reviews, review => formatted += `<li><span style='background-color: cyan;'>GH:</span> Reviewed <a href='${review.html_url}'>PR #${review.pull_request_url.split('/').pop()}</a> &mdash; ${review.prTitle.replace(/\[/g, "{").replace(/\]/g, "}")}</li>`);
         }
 
         if (!_.isEmpty(comments)) {
