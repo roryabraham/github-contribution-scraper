@@ -147,7 +147,7 @@ function getGitHubData(username, startDate, endDate, twoWeeksBefore) {
             .then(reviews => _.map(reviews, review => {
                 let url = review.html_url.replace(/#.*$/, '');
                 let pr = _.find(reviewedPRs, reviewedPR => reviewedPR.html_url === url);
-                review.prTitle = pr.title;
+                review.prTitle = pr.title.replace(/\[/g, "{").replace(/\]/g, "}");
                 return review;
             }))
             .then(reviews => ({
@@ -376,7 +376,7 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
     let formatted = '';
     if (!_.every([issues, reviews, comments, commits], item => _.isEmpty(item))) {
         const outputDate = DateUtils.formatDateForOutput(date);
-        formatted += `<h3>${outputDate} <a href='https://github.com/${username}?tab=overview&from=${date}&to=${date}'><span style='background-color: cyan;'>[Note: GH Activity]</span></a></h3>`;
+        formatted += `<h3>${outputDate} <a href='https://github.com/${username}?tab=overview&from=${date}&to=${date}'><span style='background-color: cyan;'>{Note: GH Activity}</span></a></h3>`;
         formatted += '<ul>';
 
         if (!_.isEmpty(issues)) {
@@ -405,8 +405,9 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
 
         if (!_.isEmpty(updatedPRsWithCommits)) {
             _.each(updatedPRsWithCommits, (prWithCommits, prNumber) => {
+                var prTitle = prWithCommits.commits[0].associatedPullRequests[0].title.replace(/\[/g, "{").replace(/\]/g, "}");
                 formatted += `<li><span style='background-color: cyan;'>GH:</span> Updated <a href='${prWithCommits.url}'>PR #${prNumber}</a> &mdash;
-                    ${prWithCommits.commits[0].associatedPullRequests[0].title} &mdash;with the following ${prWithCommits.commits.length} commit(s):
+                    ${prTitle} &mdash;with the following ${prWithCommits.commits.length} commit(s):
                     <ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
             });
         }
