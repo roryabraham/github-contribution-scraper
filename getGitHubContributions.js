@@ -405,7 +405,7 @@ function formatGHDataForOutput(username, date, issues, reviews, comments, commit
 
         if (!_.isEmpty(updatedPRsWithCommits)) {
             _.each(updatedPRsWithCommits, (prWithCommits, prNumber) => {
-                var prTitle = prWithCommits.commits[0].associatedPullRequests[0].title.replace(/\[/g, "{").replace(/\]/g, "}");
+                const prTitle = prWithCommits.commits[0].associatedPullRequests[0].title.replace(/\[/g, "{").replace(/\]/g, "}");
                 formatted += `<li><span style='background-color: cyan;'>GH:</span> Updated <a href='${prWithCommits.url}'>PR #${prNumber}</a> &mdash;
                     ${prTitle} &mdash;with the following ${prWithCommits.commits.length} commit(s):
                     <ul>${_.map(_.pluck(prWithCommits.commits, 'html_url'), url => `<li><a href='${url}'>${url.split('/').pop().substring(0, 7)}</a></li>`).join('')}</ul></li>`;
